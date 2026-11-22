@@ -1,0 +1,67 @@
+// CL-IL: Unified Optimizer Pipeline Test Suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/parser/parser.zk"
+import "../src/transform/optimizer.zk"
+
+fn test_optimizer_o1():
+    // Test -O1 on alloca/load/store sequence
+    ir_src := "define i64 @test_opt_o1() {\n"
+    ir_src = ir_src + "entry:\n"
+    ir_src = ir_src + "  %x = alloca i64\n"
+    ir_src = ir_src + "  store i64 42, ptr %x\n"
+    ir_src = ir_src + "  %val = load i64, ptr %x\n"
+    ir_src = ir_src + "  %dead = add i64 100, 200\n"
+    ir_src = ir_src + "  ret i64 %val\n"
+    ir_src = ir_src + "}\n"
+
+    m := parse_module(ir_src)
+    assert m.functions.len() == 1, "module must have 1 function"
+
+    initial_insts := m.functions[0].blocks[0].instructions.len()
+    assert initial_insts == 5, "initial instructions should be 5"
+
+    changes := optimize_module(m, 1)
+    assert changes > 0, "optimizer -O1 must apply transformations"
+
+    final_insts := m.functions[0].blocks[0].instructions.len()
+    assert final_insts < initial_insts, "dead code and alloca/load/store must be optimized away"
+    print("Optimizer -O1 Verified: " + to_text(changes) + " transformation(s) applied, pruned to " + to_text(final_insts) + " instruction(s).")
+
+fn test_optimizer_o3():
+    // Test -O3 with constant expressions and dead code
+    ir_src := "define i64 @leaf_helper(i64 %a) {\n"
+    ir_src = ir_src + "entry:\n"
+    ir_src = ir_src + "  %res = add i64 %a, 10\n"
+    ir_src = ir_src + "  ret i64 %res\n"
+    ir_src = ir_src + "}\n\n"
+    ir_src = ir_src + "define i64 @main_func() {\n"
+    ir_src = ir_src + "entry:\n"
+    ir_src = ir_src + "  %unused = mul i64 50, 2\n"
+    ir_src = ir_src + "  %c1 = add i64 10, 20\n"
+    ir_src = ir_src + "  %c2 = sub i64 100, 30\n"
+    ir_src = ir_src + "  %call_res = call i64 @leaf_helper(i64 %c1)\n"
+    ir_src = ir_src + "  ret i64 %call_res\n"
+    ir_src = ir_src + "}\n"
+
+    m := parse_module(ir_src)
+    assert m.functions.len() == 2, "module must have 2 functions"
+
+    changes := optimize_module(m, 3)
+    assert changes > 0, "optimizer -O3 must apply transformations"
+    print("Optimizer -O3 Verified: Full iterative pipeline applied " + to_text(changes) + " transformation(s).")
+
+fn main():
+    print("Testing CL-IL (Unified Optimization Pipeline Target 3)...")
+    test_optimizer_o1()
+    print("test_optimizer_o1 passed")
+
+    test_optimizer_o3()
+    print("test_optimizer_o3 passed")
+
+    print("")
+    print("✓ All tests passed for CL-IL Optimizer Pipeline!")

@@ -1,0 +1,88 @@
+// CL-IL: End-to-End Pipeline Integration Test Suite (Targets 1, 2, 3, 4)
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/parser/lexer.zk"
+import "../src/parser/parser.zk"
+import "../src/transform/optimizer.zk"
+import "../src/target/binary/elf64.zk"
+import "../src/execution/interpreter.zk"
+import "../src/lifter/decompiler.zk"
+
+fn test_end_to_end_targets():
+    // Construct realistic Cluster-emitted CL-IL IR containing:
+    // - Target 1: Global constant string & external declare
+    // - Target 2: Struct definition (%struct.string) and GEP access
+    // - Target 3: SSA optimization (const fold, mem2reg, DCE)
+    // - Target 4: Direct ELF64 object compilation
+
+    clil_code := "%struct.string = type { i64, ptr }\n\n"
+    clil_code = clil_code + "@.str_msg = private unnamed_addr constant [14 x i8] c\"Hello CL-IL!\\00\", align 1\n\n"
+    clil_code = clil_code + "declare void @zk_print(ptr)\n\n"
+    clil_code = clil_code + "define i64 @main() {\n"
+    clil_code = clil_code + "entry:\n"
+    clil_code = clil_code + "  %s = alloca %struct.string\n"
+    clil_code = clil_code + "  %fld0 = getelementptr inbounds %struct.string, ptr %s, i32 0, i32 0\n"
+    clil_code = clil_code + "  store i64 12, ptr %fld0\n"
+    clil_code = clil_code + "  %len = load i64, ptr %fld0\n"
+    clil_code = clil_code + "  %unused_dead = mul i64 999, 888\n"
+    clil_code = clil_code + "  %bonus = add i64 10, 20\n"
+    clil_code = clil_code + "  %res = add i64 %len, %bonus\n"
+    clil_code = clil_code + "  ret i64 %res\n"
+    clil_code = clil_code + "}\n"
+
+    // [1] Target 1 & 2: Parse Struct, Global Constant, Declare, and GEP
+    m := parse_module(clil_code)
+    assert m.structs.len() == 1, "must parse 1 struct type"
+    assert m.structs[0].name == "struct.string", "struct name must match"
+    print("[Target 1 & 2] Struct type '%" + m.structs[0].name + "' successfully resolved.")
+
+    assert m.globals.len() == 1, "must parse 1 global constant"
+    assert m.globals[0].is_constant, "global must be marked constant"
+    assert m.globals[0].str_value == "Hello CL-IL!", "string literal must match"
+    print("[Target 1] Global string constant '@" + m.globals[0].name + "' -> c\"" + m.globals[0].str_value + "\" successfully resolved.")
+
+    assert m.declares.len() == 1, "must parse 1 external declare"
+    print("[Target 1] External declare: 'declare " + m.declares[0] + "' successfully resolved.")
+
+    assert m.functions.len() == 1, "must parse 1 function"
+    f := m.functions[0]
+    assert f.name == "main", "function name must be main"
+
+    // [2] In-Memory Execution before optimization
+    args: vector[int] := []
+    vm_result := execute_function(f, args)
+    assert vm_result == 42, "interpreter must execute struct GEP and arithmetic returning 42 (12 + 30)"
+    print("[Execution] In-memory execution: @main() -> " + to_text(vm_result) + " (Expected: 42).")
+
+    // [3] Target 3: Unified Optimization Pipeline (-O3)
+    opts_applied := optimize_module(m, 3)
+    assert opts_applied > 0, "optimizer -O3 must apply transformations"
+    print("[Target 3] Unified SSA Pipeline applied " + to_text(opts_applied) + " optimization transformation(s).")
+
+    // Verify optimized instructions
+    opt_insts := m.functions[0].blocks[0].instructions.len()
+    assert opt_insts < 8, "instructions must be reduced by mem2reg/const_fold/dce"
+
+    // [4] Target 4: Direct ELF64 Object Compilation
+    out_obj := "/tmp/clil_pipeline_output.o"
+    bytes_written := elf_emit_module(m, out_obj)
+    assert bytes_written > 100, "ELF64 binary writer must produce valid relocatable object"
+    print("[Target 4] Direct ELF64 Object File emitted: '" + out_obj + "' (" + to_text(bytes_written) + " bytes).")
+
+    // [5] Lifter verification
+    cluster_code := structurize_and_decompile(m.functions[0])
+    assert len(cluster_code) > 0, "decompiled cluster code must not be empty"
+    print("[Lifter] Decompiled to idiomatic Cluster code:")
+    print(cluster_code)
+
+fn main():
+    print("Testing CL-IL Full 4-Target Pipeline Integration...")
+    test_end_to_end_targets()
+    print("test_end_to_end_targets passed")
+
+    print("")
+    print("✓ All 4 Targets Verified with 100% Success in CL-IL Pipeline!")

@@ -1,0 +1,19 @@
+; CL-IL Intermediate Language Example
+source_filename = "sample.clil"
+
+%struct.string = type { i64, ptr }
+
+@.str_welcome = private unnamed_addr constant [24 x i8] c"Cluster Intermediate\00", align 1
+
+declare void @cluster_runtime_log(ptr)
+
+define i64 @main() {
+entry:
+  %x = alloca i64
+  store i64 100, ptr %x
+  %v = load i64, ptr %x
+  %dead_code = mul i64 77, 88
+  %step1 = add i64 %v, 50
+  %final_res = sub i64 %step1, 8
+  ret i64 %final_res
+}
