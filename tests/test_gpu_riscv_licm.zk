@@ -1,0 +1,106 @@
+// cluster-llvm: GPU (NVPTX), RISC-V & LICM Advanced test suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/target/nvptx/registers.zk"
+import "../src/target/nvptx/emitter.zk"
+import "../src/target/riscv/registers.zk"
+import "../src/target/riscv/emitter.zk"
+import "../src/lifter/relooper.zk"
+import "../src/transform/passes/licm.zk"
+
+fn test_gpu_ptx_generation():
+    f := func_new("vector_add_kernel", TYPE_VOID)
+    func_add_param(f, "a_ptr", TYPE_PTR)
+    func_add_param(f, "b_ptr", TYPE_PTR)
+    func_add_param(f, "c_ptr", TYPE_PTR)
+
+    bb := bb_new("entry")
+    va := val_reg("rd0", TYPE_I64)
+    vb := val_reg("rd1", TYPE_I64)
+    bb_add_inst(bb, Instruction(OP_ADD, "rd10", TYPE_I64, va, vb, "", ""))
+    bb_add_inst(bb, Instruction(OP_RET_VOID, "", TYPE_VOID, va, vb, "", ""))
+    func_add_block(f, bb)
+
+    ptx_code := emit_nvptx_kernel(f)
+    assert len(ptx_code) > 80, "PTX output must not be empty"
+    print("Generated NVIDIA PTX CUDA Kernel:")
+    print(ptx_code)
+
+fn test_riscv_generation():
+    f := func_new("riscv_multiply", TYPE_I64)
+    func_add_param(f, "x", TYPE_I64)
+    func_add_param(f, "y", TYPE_I64)
+
+    bb := bb_new("entry")
+    vx := val_reg("a0", TYPE_I64)
+    vy := val_reg("a1", TYPE_I64)
+    bb_add_inst(bb, Instruction(OP_MUL, "a0", TYPE_I64, vx, vy, "", ""))
+    bb_add_inst(bb, Instruction(OP_RET, "", TYPE_I64, vx, vx, "", ""))
+    func_add_block(f, bb)
+
+    riscv_asm := emit_riscv_function(f)
+    assert len(riscv_asm) > 50, "RISC-V assembly output must not be empty"
+    print("Generated RISC-V RV64GC Assembly:")
+    print(riscv_asm)
+
+fn test_licm_pass():
+    m := module_new("licm_mod.ll")
+    f := func_new("loop_with_invariant", TYPE_I64)
+    func_add_param(f, "limit", TYPE_I64)
+    func_add_param(f, "scale", TYPE_I64)
+
+    // Header block
+    header_bb := bb_new("header")
+    v_i := val_reg("i", TYPE_I64)
+    v_lim := val_reg("limit", TYPE_I64)
+    bb_add_inst(header_bb, Instruction(OP_ICMP_SLT, "cmp", TYPE_I1, v_i, v_lim, "", ""))
+    v_cmp := val_reg("cmp", TYPE_I1)
+    bb_add_inst(header_bb, Instruction(OP_BR_COND, "", TYPE_VOID, v_cmp, v_cmp, "body", "exit"))
+    func_add_block(f, header_bb)
+
+    // Body block:
+    // %inv = mul i64 %scale, 5 (LOOP INVARIANT! Can be hoisted!)
+    // %i_next = add i64 %i, 1
+    // br label %header
+    body_bb := bb_new("body")
+    v_scale := val_reg("scale", TYPE_I64)
+    c5 := val_const_int(TYPE_I64, 5)
+    bb_add_inst(body_bb, Instruction(OP_MUL, "inv", TYPE_I64, v_scale, c5, "", ""))
+    c1 := val_const_int(TYPE_I64, 1)
+    bb_add_inst(body_bb, Instruction(OP_ADD, "i", TYPE_I64, v_i, c1, "", ""))
+    v_dummy := val_reg("", TYPE_VOID)
+    bb_add_inst(body_bb, Instruction(OP_BR, "", TYPE_VOID, v_dummy, v_dummy, "header", ""))
+    func_add_block(f, body_bb)
+
+    // Exit block
+    exit_bb := bb_new("exit")
+    bb_add_inst(exit_bb, Instruction(OP_RET, "", TYPE_I64, v_i, v_i, "", ""))
+    func_add_block(f, exit_bb)
+
+    module_add_func(m, f)
+
+    assert m.functions[0].blocks[1].instructions.len() == 3, "must have 3 body instructions before LICM"
+
+    hoisted := pass_licm(m)
+    assert hoisted == 1, "exactly 1 loop-invariant instruction must be hoisted"
+
+    assert m.functions[0].blocks[1].instructions.len() == 2, "must have 2 body instructions after hoisting"
+    print("LICM Pass Verified: 1 loop-invariant computation successfully hoisted out of loop body.")
+
+fn main():
+    print("Testing cluster-llvm (GPU NVPTX, RISC-V & LICM Pass)...")
+    test_gpu_ptx_generation()
+    print("test_gpu_ptx_generation passed")
+
+    test_riscv_generation()
+    print("test_riscv_generation passed")
+
+    test_licm_pass()
+    print("test_licm_pass passed")
+
+    print("")
+    print("✓ All tests passed for cluster-llvm Advanced GPU, RISC-V & LICM Pipeline!")
