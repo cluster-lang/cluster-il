@@ -1,0 +1,56 @@
+// cluster-llvm: Function Inliner test suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/transform/inliner.zk"
+
+fn test_function_inlining():
+    m := module_new("inline_test.ll")
+
+    // Leaf function: @add_five(%x) -> return %x + 5
+    f_callee := func_new("add_five", TYPE_I64)
+    func_add_param(f_callee, "x", TYPE_I64)
+    bb_callee := bb_new("entry")
+    vx := val_reg("x", TYPE_I64)
+    c5 := val_const_int(TYPE_I64, 5)
+    bb_add_inst(bb_callee, Instruction(OP_ADD, "res", TYPE_I64, vx, c5, "", ""))
+    v_res := val_reg("res", TYPE_I64)
+    bb_add_inst(bb_callee, Instruction(OP_RET, "", TYPE_I64, v_res, v_res, "", ""))
+    func_add_block(f_callee, bb_callee)
+    module_add_func(m, f_callee)
+
+    // Caller function: @main_calc(%a) -> %t = call @add_five(%a), ret %t
+    f_caller := func_new("main_calc", TYPE_I64)
+    func_add_param(f_caller, "a", TYPE_I64)
+    bb_caller := bb_new("entry")
+    va := val_reg("a", TYPE_I64)
+    v_dummy := val_reg("", TYPE_VOID)
+    bb_add_inst(bb_caller, Instruction(OP_CALL, "t", TYPE_I64, va, v_dummy, "add_five", ""))
+    vt := val_reg("t", TYPE_I64)
+    bb_add_inst(bb_caller, Instruction(OP_RET, "", TYPE_I64, vt, vt, "", ""))
+    func_add_block(f_caller, bb_caller)
+    module_add_func(m, f_caller)
+
+    // Verify caller has OP_CALL before inlining
+    assert m.functions[1].blocks[0].instructions[0].opcode == OP_CALL, "caller must have CALL before inlining"
+
+    // Run inliner pass
+    inlined_count := pass_inline_leaf_functions(m)
+    assert inlined_count == 1, "exactly 1 function call must be inlined"
+
+    // Verify OP_CALL is replaced
+    caller_first_inst := m.functions[1].blocks[0].instructions[0]
+    assert caller_first_inst.opcode != OP_CALL, "caller must not have OP_CALL after inlining"
+
+    print("Function Inlining Verified: Call to @add_five was successfully inlined into @main_calc.")
+
+fn main():
+    print("Testing cluster-llvm (Function Inliner Optimization Pass)...")
+    test_function_inlining()
+    print("test_function_inlining passed")
+
+    print("")
+    print("✓ All tests passed for cluster-llvm Function Inliner!")

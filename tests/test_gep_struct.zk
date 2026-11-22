@@ -1,0 +1,93 @@
+// cluster-llvm: Struct GEP & PHI Node test suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/execution/interpreter.zk"
+
+fn test_struct_gep_memory():
+    f := func_new("struct_test", TYPE_I64)
+    bb := bb_new("entry")
+
+    // %ptr = alloca %struct.Point
+    v_dummy := val_reg("", TYPE_VOID)
+    bb_add_inst(bb, Instruction(OP_ALLOCA, "p", TYPE_PTR, v_dummy, v_dummy, "", ""))
+
+    // GEP field 1 (offset = p + 8)
+    vp := val_reg("p", TYPE_PTR)
+    idx1 := val_const_int(TYPE_I32, 1)
+    bb_add_inst(bb, Instruction(OP_GEP, "fld1_ptr", TYPE_PTR, vp, idx1, "%struct.Point", ""))
+
+    // store 777 into field 1
+    c777 := val_const_int(TYPE_I64, 777)
+    v_fld1 := val_reg("fld1_ptr", TYPE_PTR)
+    bb_add_inst(bb, Instruction(OP_STORE, "", TYPE_VOID, c777, v_fld1, "", ""))
+
+    // %loaded = load i64, ptr %fld1_ptr
+    bb_add_inst(bb, Instruction(OP_LOAD, "loaded", TYPE_I64, v_fld1, v_dummy, "", ""))
+
+    // ret %loaded
+    v_loaded := val_reg("loaded", TYPE_I64)
+    bb_add_inst(bb, Instruction(OP_RET, "", TYPE_I64, v_loaded, v_loaded, "", ""))
+
+    func_add_block(f, bb)
+
+    args: vector[int] := []
+    res := execute_function(f, args)
+    assert res == 777, "loaded struct field must be 777"
+    print("Struct GEP & Memory Virtualization Verified: Stored and Loaded 777 successfully.")
+
+fn test_phi_node_execution():
+    f := func_new("phi_test", TYPE_I64)
+    func_add_param(f, "flag", TYPE_I1)
+
+    // entry: br i1 %flag, label %b_true, label %b_false
+    entry_bb := bb_new("entry")
+    v_flag := val_reg("flag", TYPE_I1)
+    bb_add_inst(entry_bb, Instruction(OP_BR_COND, "", TYPE_VOID, v_flag, v_flag, "b_true", "b_false"))
+    func_add_block(f, entry_bb)
+
+    // b_true: br label %merge
+    b_true := bb_new("b_true")
+    v_dummy := val_reg("", TYPE_VOID)
+    bb_add_inst(b_true, Instruction(OP_BR, "", TYPE_VOID, v_dummy, v_dummy, "merge", ""))
+    func_add_block(f, b_true)
+
+    // b_false: br label %merge
+    b_false := bb_new("b_false")
+    bb_add_inst(b_false, Instruction(OP_BR, "", TYPE_VOID, v_dummy, v_dummy, "merge", ""))
+    func_add_block(f, b_false)
+
+    // merge: %res = phi i64 [ 100, %b_true ], [ 200, %b_false ], ret %res
+    merge_bb := bb_new("merge")
+    c100 := val_const_int(TYPE_I64, 100)
+    c200 := val_const_int(TYPE_I64, 200)
+    bb_add_inst(merge_bb, Instruction(OP_PHI, "res", TYPE_I64, c100, c200, "b_true", "b_false"))
+    v_res := val_reg("res", TYPE_I64)
+    bb_add_inst(merge_bb, Instruction(OP_RET, "", TYPE_I64, v_res, v_res, "", ""))
+    func_add_block(f, merge_bb)
+
+    // Test with flag = 1 -> expect 100
+    args_true: vector[int] := [1]
+    res_true := execute_function(f, args_true)
+    assert res_true == 100, "phi must select 100 from b_true"
+
+    // Test with flag = 0 -> expect 200
+    args_false: vector[int] := [0]
+    res_false := execute_function(f, args_false)
+    assert res_false == 200, "phi must select 200 from b_false"
+
+    print("SSA PHI Node Resolution Verified: flag=1 -> 100, flag=0 -> 200.")
+
+fn main():
+    print("Testing cluster-llvm (Struct GEP & SSA PHI Resolution)...")
+    test_struct_gep_memory()
+    print("test_struct_gep_memory passed")
+
+    test_phi_node_execution()
+    print("test_phi_node_execution passed")
+
+    print("")
+    print("✓ All tests passed for cluster-llvm GEP & PHI Subsystems!")

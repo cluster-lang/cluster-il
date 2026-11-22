@@ -3,7 +3,7 @@
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
 name := "cluster-llvm"
-version := "0.2.0"
+version := "1.0.0"
 description := "Pure Native LLVM Intermediate Representation, Builder, Parser, In-Memory Execution Engine, Optimizer & Lifter in Cluster Language"
 main := "src/main.zk"
 license := "CCFL-2.0"
