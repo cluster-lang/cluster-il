@@ -1,6 +1,6 @@
 # Cluster LLVM (`cluster-llvm`)
 
-Pure Native LLVM Intermediate Representation (IR), Builder, Text Parser, In-Memory Execution Engine, Optimizer, and Decompilation Lifter written in **100% Pure Cluster Language (`.zk` / `.cl`)**.
+Pure Native LLVM Intermediate Representation (IR), Builder, Text Parser, In-Memory Execution Engine, Optimizer, Multi-Target Assembly Code Generator (x86_64, ARM64, WASM), and Decompilation Lifter written in **100% Pure Cluster Language (`.zk` / `.cl`)**.
 
 > 🚀 **100% Zero External Dependencies**: Does not link against `libLLVM.so` or external C++ runtimes. Compiles directly into native machine code with the Cluster compiler (`cl`).
 
@@ -17,7 +17,7 @@ cluster-llvm/
 │   ├── llvm.zk               # Master unified facade
 │   ├── ir/
 │   │   ├── types.zk          # Strongly typed LLVM type system (i1..i64, ptr, float, array, void)
-│   │   ├── instructions.zk   # LLVM opcodes (arithmetic, bitwise, icmp, memory, GEP, PHI, call)
+│   │   ├── instructions.zk   # LLVM opcodes (arithmetic, bitwise, icmp, alloca, load, store, GEP, PHI, call)
 │   │   └── builder.zk        # BasicBlock, Function, Module & IRBuilder API
 │   ├── parser/
 │   │   ├── lexer.zk          # Streaming tokenizer for LLVM textual IR (.ll)
@@ -28,6 +28,15 @@ cluster-llvm/
 │   │   └── inliner.zk        # Function inliner optimization pass for leaf calls
 │   ├── execution/
 │   │   └── interpreter.zk    # In-memory virtual machine & execution engine with GEP & PHI
+│   ├── target/
+│   │   ├── x86_64/
+│   │   │   ├── registers.zk  # AMD64/x86_64 register ABI
+│   │   │   └── emitter.zk    # Direct x86_64 assembly code generator
+│   │   ├── aarch64/
+│   │   │   ├── registers.zk  # ARM64/Apple Silicon register ABI
+│   │   │   └── emitter.zk    # Direct ARM64 assembly code generator
+│   │   └── wasm/
+│   │       └── emitter.zk    # WebAssembly (WASM) Text WAT generator
 │   └── lifter/
 │       ├── decompiler.zk     # Decompiles LLVM IR back into pure Cluster code (.zk / .cl)
 │       └── relooper.zk       # Loop structurizer (detects loops -> native while loops)
@@ -39,7 +48,8 @@ cluster-llvm/
     ├── test_dce.zk           # Dead code elimination pass tests
     ├── test_relooper.zk      # Relooper while loop recovery tests
     ├── test_gep_struct.zk    # Struct GEP offset & SSA PHI node resolution tests
-    └── test_inliner.zk       # Function inlining optimization pass tests
+    ├── test_inliner.zk       # Function inliner optimization pass tests
+    └── test_targets.zk       # Multi-target hardware emitter tests (x86_64, ARM64, WASM)
 ```
 
 ---
@@ -58,7 +68,11 @@ cluster-llvm/
    - **Constant Folding**: Compile-time constant calculation (`40 + 2` $\to$ `42`).
    - **Dead Code Elimination (DCE)**: Prunes unused instructions and dead registers.
    - **Function Inliner**: Inlines leaf function calls into caller blocks to eliminate call overhead.
-5. **Cluster Lifter & Relooper**:
+5. **Multi-Target Hardware Code Generators**:
+   - Native **x86_64** GNU/NASM assembly generator.
+   - Native **AArch64** (ARM64 / Apple Silicon) assembly generator.
+   - Native **WebAssembly (WASM)** WAT text format generator.
+6. **Cluster Lifter & Relooper**:
    - Converts unstructured branch graphs back into high-level, structured Cluster **`while`** loops and conditionals.
 
 ---
@@ -70,7 +84,7 @@ cluster-llvm/
 cl run src/main.zk
 ```
 
-### 2. Run All 7 Verification Test Suites
+### 2. Run All 9 Verification Test Suites
 ```bash
 # 1. Test IR Builder & Text Emission
 cl run tests/test_ir.zk
@@ -95,6 +109,9 @@ cl run tests/test_gep_struct.zk
 
 # 8. Test Function Inliner Pass
 cl run tests/test_inliner.zk
+
+# 9. Test Hardware Emitters (x86_64, ARM64, WASM)
+cl run tests/test_targets.zk
 ```
 
 ---

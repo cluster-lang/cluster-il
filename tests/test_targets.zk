@@ -1,0 +1,53 @@
+// cluster-llvm: Multi-Target Hardware Emitter test suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/target/x86_64/registers.zk"
+import "../src/target/x86_64/emitter.zk"
+import "../src/target/aarch64/registers.zk"
+import "../src/target/aarch64/emitter.zk"
+import "../src/target/wasm/emitter.zk"
+
+fn test_hardware_targets():
+    f := func_new("hardware_calc", TYPE_I64)
+    func_add_param(f, "a", TYPE_I64)
+    func_add_param(f, "b", TYPE_I64)
+
+    bb := bb_new("entry")
+    va := val_reg("a", TYPE_I64)
+    vb := val_reg("b", TYPE_I64)
+
+    // %t0 = add i64 %a, %b
+    bb_add_inst(bb, Instruction(OP_ADD, "t0", TYPE_I64, va, vb, "", ""))
+    vt0 := val_reg("t0", TYPE_I64)
+    bb_add_inst(bb, Instruction(OP_RET, "", TYPE_I64, vt0, vt0, "", ""))
+    func_add_block(f, bb)
+
+    // 1. Emit x86_64 Assembly
+    x86_asm := emit_x86_function(f)
+    assert len(x86_asm) > 50, "x86_64 assembly output must not be empty"
+    print("Generated x86_64 Assembly:")
+    print(x86_asm)
+
+    // 2. Emit AArch64 (ARM64) Assembly
+    arm_asm := emit_aarch64_function(f)
+    assert len(arm_asm) > 50, "AArch64 assembly output must not be empty"
+    print("Generated AArch64 Assembly:")
+    print(arm_asm)
+
+    // 3. Emit WebAssembly (WASM) WAT
+    wasm_wat := emit_wasm_function(f)
+    assert len(wasm_wat) > 30, "WASM WAT output must not be empty"
+    print("Generated WebAssembly WAT:")
+    print(wasm_wat)
+
+fn main():
+    print("Testing cluster-llvm (Multi-Target Hardware Emitters)...")
+    test_hardware_targets()
+    print("test_hardware_targets passed")
+
+    print("")
+    print("✓ All tests passed for cluster-llvm Hardware Targets (x86_64, ARM64, WASM)!")
