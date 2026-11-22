@@ -11,27 +11,32 @@ Pure Native LLVM Intermediate Representation (IR), Builder, Text Parser, In-Memo
 ```
 cluster-llvm/
 ├── package.zk                # Package manifest with CCFL v2.0 terms
-├── README.md                 # Architecture, specifications, and quickstart
+├── README.md                 # Complete architecture and usage documentation
 ├── src/
-│   ├── llvm.zk               # Master unified framework facade
+│   ├── main.zk               # Unified demonstration and pipeline driver
+│   ├── llvm.zk               # Master unified facade
 │   ├── ir/
 │   │   ├── types.zk          # Strongly typed LLVM type system (i1..i64, ptr, float, array)
 │   │   ├── instructions.zk   # LLVM opcodes & valid textual .ll code emitter
 │   │   └── builder.zk        # BasicBlock, Function, Module & IRBuilder API
 │   ├── parser/
 │   │   ├── lexer.zk          # Streaming tokenizer for LLVM textual IR (.ll)
-│   │   └── parser.zk         # Recursive-descent AST parser for .ll modules
+│   │   └── parser.zk         # AST parser for textual LLVM IR modules & functions
 │   ├── transform/
-│   │   └── const_fold.zk     # Constant folding optimization pass
+│   │   ├── const_fold.zk     # Compile-time constant folding optimization pass
+│   │   └── dce.zk            # Dead code elimination (DCE) optimization pass
 │   ├── execution/
-│   │   └── interpreter.zk    # Pure Cluster in-memory LLVM IR execution engine
+│   │   └── interpreter.zk    # In-memory virtual machine & execution engine
 │   └── lifter/
-│       └── decompiler.zk     # Decompiles LLVM IR back into pure Cluster code (.zk / .cl)
+│       ├── decompiler.zk     # Decompiles LLVM IR back into pure Cluster code (.zk / .cl)
+│       └── relooper.zk       # Loop structurizer (detects loops -> native while loops)
 └── tests/
     ├── test_ir.zk            # IR construction and .ll text emission tests
     ├── test_parser.zk        # LLVM IR text lexer and parser verification tests
     ├── test_interpreter.zk   # Virtual machine execution engine tests
-    └── test_lifter.zk        # Constant folding and Cluster code decompilation tests
+    ├── test_lifter.zk        # Constant folding and Cluster code decompilation tests
+    ├── test_dce.zk           # Dead code elimination pass tests
+    └── test_relooper.zk      # Relooper while loop recovery tests
 ```
 
 ---
@@ -46,15 +51,21 @@ cluster-llvm/
 3. **In-Memory Interpreter**:
    - Evaluate LLVM functions directly in memory with virtual register bindings without needing an external native compiler.
 4. **Optimization Pipeline**:
-   - Compile-time constant folding and instruction simplification.
-5. **Cluster Lifter (Decompiler)**:
-   - Lift LLVM IR basic blocks and instructions back into clean, high-level Cluster Language code.
+   - **Constant Folding**: Compile-time constant calculation.
+   - **Dead Code Elimination (DCE)**: Prunes unused instructions and dead registers.
+5. **Cluster Lifter & Relooper**:
+   - Converts unstructured branch graphs back into high-level, structured Cluster `while` loops and conditionals.
 
 ---
 
-## 🧪 Test Suite Execution
+## 🧪 Pipeline Demo & Test Suite Execution
 
-All test suites run natively via `cl run`:
+### 1. Run Complete Architecture Demo
+```bash
+cl run src/main.zk
+```
+
+### 2. Run All 6 Verification Test Suites
 ```bash
 # 1. Test IR Builder & Text Emission
 cl run tests/test_ir.zk
@@ -67,6 +78,12 @@ cl run tests/test_interpreter.zk
 
 # 4. Test Decompiler Lifter & Optimizations
 cl run tests/test_lifter.zk
+
+# 5. Test Dead Code Elimination
+cl run tests/test_dce.zk
+
+# 6. Test Relooper Loop Structurizer
+cl run tests/test_relooper.zk
 ```
 
 ---

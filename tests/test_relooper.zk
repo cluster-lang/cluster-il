@@ -1,0 +1,49 @@
+// cluster-llvm: Relooper Loop Structurizer test suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/lifter/decompiler.zk"
+import "../src/lifter/relooper.zk"
+
+fn test_loop_structurization():
+    f := func_new("count_to_ten", TYPE_I64)
+    func_add_param(f, "i", TYPE_I64)
+
+    // header block: check i < 10
+    header_bb := bb_new("header")
+    vi := val_reg("i", TYPE_I64)
+    c10 := val_const_int(TYPE_I64, 10)
+    bb_add_inst(header_bb, Instruction(OP_ICMP_SLT, "cmp", TYPE_I1, vi, c10, "", ""))
+    v_cmp := val_reg("cmp", TYPE_I1)
+    bb_add_inst(header_bb, Instruction(OP_BR_COND, "", TYPE_VOID, v_cmp, v_cmp, "body", "exit"))
+    func_add_block(f, header_bb)
+
+    // body block: i = i + 1, jump back to header
+    body_bb := bb_new("body")
+    c1 := val_const_int(TYPE_I64, 1)
+    bb_add_inst(body_bb, Instruction(OP_ADD, "i", TYPE_I64, vi, c1, "", ""))
+    v_dummy := val_reg("", TYPE_VOID)
+    bb_add_inst(body_bb, Instruction(OP_BR, "", TYPE_VOID, v_dummy, v_dummy, "header", ""))
+    func_add_block(f, body_bb)
+
+    // exit block: ret i
+    exit_bb := bb_new("exit")
+    bb_add_inst(exit_bb, Instruction(OP_RET, "", TYPE_I64, vi, vi, "", ""))
+    func_add_block(f, exit_bb)
+
+    structured_cluster := structurize_and_decompile(f)
+    assert len(structured_cluster) > 30, "structured output must not be empty"
+
+    print("Decompiled Loop in Cluster:")
+    print(structured_cluster)
+
+fn main():
+    print("Testing cluster-llvm (Relooper & Loop Structurizer)...")
+    test_loop_structurization()
+    print("test_loop_structurization passed")
+
+    print("")
+    print("✓ All tests passed for cluster-llvm Relooper!")

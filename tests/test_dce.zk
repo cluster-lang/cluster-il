@@ -1,0 +1,55 @@
+// cluster-llvm: Dead Code Elimination (DCE) test suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/transform/dce.zk"
+
+fn test_dead_code_elimination():
+    m := module_new("dce_test.ll")
+    f := func_new("cleanup_test", TYPE_I64)
+    func_add_param(f, "a", TYPE_I64)
+
+    bb := bb_new("entry")
+    va := val_reg("a", TYPE_I64)
+    c1 := val_const_int(TYPE_I64, 1)
+    c99 := val_const_int(TYPE_I64, 99)
+
+    // %used = add i64 %a, 1
+    bb_add_inst(bb, Instruction(OP_ADD, "used", TYPE_I64, va, c1, "", ""))
+
+    // %dead = mul i64 %a, 99 (NEVER USED)
+    bb_add_inst(bb, Instruction(OP_MUL, "dead", TYPE_I64, va, c99, "", ""))
+
+    // ret i64 %used
+    v_used := val_reg("used", TYPE_I64)
+    bb_add_inst(bb, Instruction(OP_RET, "", TYPE_I64, v_used, v_used, "", ""))
+
+    func_add_block(f, bb)
+    module_add_func(m, f)
+
+    assert m.functions[0].blocks[0].instructions.len() == 3, "must have 3 instructions before DCE"
+
+    eliminated := pass_dce(m)
+    assert eliminated == 1, "exactly 1 dead instruction must be eliminated"
+
+    remaining := m.functions[0].blocks[0].instructions.len()
+    assert remaining == 2, "must have 2 instructions after DCE"
+
+    inst0 := m.functions[0].blocks[0].instructions[0]
+    assert inst0.result_name == "used", "remaining inst 0 must be 'used'"
+
+    inst1 := m.functions[0].blocks[0].instructions[1]
+    assert inst1.opcode == OP_RET, "remaining inst 1 must be RET"
+
+    print("Dead Code Elimination Verified: 1 dead calculation successfully pruned.")
+
+fn main():
+    print("Testing cluster-llvm (DCE Optimization Pass)...")
+    test_dead_code_elimination()
+    print("test_dead_code_elimination passed")
+
+    print("")
+    print("✓ All tests passed for cluster-llvm DCE Pass!")
