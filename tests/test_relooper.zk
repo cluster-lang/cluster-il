@@ -1,4 +1,4 @@
-// cluster-llvm: Relooper Loop Structurizer test suite
+// CL-IL: Relooper Loop Structurizer test suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -41,9 +41,9 @@ fn test_loop_structurization():
     print(structured_cluster)
 
 fn main():
-    print("Testing cluster-llvm (Relooper & Loop Structurizer)...")
+    print("Testing CL-IL (Relooper & Loop Structurizer)...")
     test_loop_structurization()
     print("test_loop_structurization passed")
 
     print("")
-    print("✓ All tests passed for cluster-llvm Relooper!")
+    print("✓ All tests passed for CL-IL Relooper!")

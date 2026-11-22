@@ -1,4 +1,4 @@
-// cluster-llvm: Dead Code Elimination (DCE) test suite
+// CL-IL: Dead Code Elimination (DCE) test suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -47,9 +47,9 @@ fn test_dead_code_elimination():
     print("Dead Code Elimination Verified: 1 dead calculation successfully pruned.")
 
 fn main():
-    print("Testing cluster-llvm (DCE Optimization Pass)...")
+    print("Testing CL-IL (DCE Optimization Pass)...")
     test_dead_code_elimination()
     print("test_dead_code_elimination passed")
 
     print("")
-    print("✓ All tests passed for cluster-llvm DCE Pass!")
+    print("✓ All tests passed for CL-IL DCE Pass!")

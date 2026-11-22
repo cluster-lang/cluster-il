@@ -1,4 +1,4 @@
-// cluster-llvm: Scalar Replacement of Aggregates (SROA) Test Suite
+// CL-IL: Scalar Replacement of Aggregates (SROA) Test Suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -70,7 +70,7 @@ fn test_sroa_aggregate_scalarization():
     print("SROA verified: Aggregate GEP accesses successfully scalarized and promoted to registers!")
 
 fn main():
-    print("Testing cluster-llvm (Phase 1: SROA pass)...")
+    print("Testing CL-IL (Phase 1: SROA pass)...")
     test_sroa_aggregate_scalarization()
     print("test_sroa_aggregate_scalarization passed")
 

@@ -1,4 +1,4 @@
-// cluster-llvm: Interpreter Execution Engine test suite
+// CL-IL: Interpreter Execution Engine test suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -70,7 +70,7 @@ fn test_parse_and_execute():
     print("@multiply_by_five(12) returned " + to_text(res) + " (Expected: 60)")
 
 fn main():
-    print("Testing cluster-llvm (In-Memory Interpreter Execution Engine)...")
+    print("Testing CL-IL (In-Memory Interpreter Execution Engine)...")
     test_direct_execution()
     print("test_direct_execution passed")
 
@@ -78,4 +78,4 @@ fn main():
     print("test_parse_and_execute passed")
 
     print("")
-    print("✓ All tests passed for cluster-llvm Interpreter Engine!")
+    print("✓ All tests passed for CL-IL Interpreter Engine!")

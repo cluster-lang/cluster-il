@@ -1,4 +1,4 @@
-// cluster-llvm: LLVM IR Parser verification test suite
+// CL-IL: LLVM IR Parser verification test suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -52,7 +52,7 @@ fn test_parser_module():
     print("Function @" + f.name + " with " + to_text(bb.instructions.len()) + " instructions successfully verified.")
 
 fn main():
-    print("Testing cluster-llvm (LLVM IR Lexer & Parser)...")
+    print("Testing CL-IL (LLVM IR Lexer & Parser)...")
     test_lexer()
     print("test_lexer passed")
 
@@ -60,4 +60,4 @@ fn main():
     print("test_parser_module passed")
 
     print("")
-    print("✓ All tests passed for cluster-llvm Parser!")
+    print("✓ All tests passed for CL-IL Parser!")

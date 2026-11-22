@@ -1,4 +1,4 @@
-// cluster-llvm: SIMD Auto-Vectorization Test Suite
+// CL-IL: SIMD Auto-Vectorization Test Suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -57,7 +57,7 @@ fn test_simd_auto_vectorization():
     print("SIMD Auto-Vectorization Verified: 4 scalar ops collapsed into single AVX/NEON vector instruction!")
 
 fn main():
-    print("Testing cluster-llvm (Phase 3: SIMD Vectorization Engine)...")
+    print("Testing CL-IL (Phase 3: SIMD Vectorization Engine)...")
     test_simd_auto_vectorization()
     print("test_simd_auto_vectorization passed")
 

@@ -1,4 +1,4 @@
-// cluster-llvm: Memory to Register (mem2reg) Test Suite
+// CL-IL: Memory to Register (mem2reg) Test Suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -63,7 +63,7 @@ fn test_mem2reg_basic():
     print("mem2reg verified: Stack alloca/load/store successfully promoted to pure SSA register!")
 
 fn main():
-    print("Testing cluster-llvm (Phase 1: mem2reg pass)...")
+    print("Testing CL-IL (Phase 1: mem2reg pass)...")
     test_mem2reg_basic()
     print("test_mem2reg_basic passed")
 

@@ -1,4 +1,4 @@
-// cluster-llvm: DWARF Debug Symbol Generator Test Suite
+// CL-IL: DWARF Debug Symbol Generator Test Suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -33,7 +33,7 @@ fn test_dwarf_generation():
     print("DWARF Debug Metadata Verified: Generated .debug_info, .debug_abbrev, .debug_str, .debug_line (" + to_text(bytes_written) + " bytes total)!")
 
 fn main():
-    print("Testing cluster-llvm (Phase 4: DWARF Debug Symbol Generation)...")
+    print("Testing CL-IL (Phase 4: DWARF Debug Symbol Generation)...")
     test_dwarf_generation()
     print("test_dwarf_generation passed")
 

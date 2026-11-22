@@ -1,4 +1,4 @@
-// cluster-llvm: Automated Lifter Pipeline Test Suite
+// CL-IL: Automated Lifter Pipeline Test Suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -31,7 +31,7 @@ fn test_autonomous_lifting_pipeline():
     print("Autonomous Lifter Pipeline Verified: C/Rust LLVM IR successfully translated into pure Cluster source and test suite!")
 
 fn main():
-    print("Testing cluster-llvm (Phase 5: High-Throughput Autonomous Lifter)...")
+    print("Testing CL-IL (Phase 5: High-Throughput Autonomous Lifter)...")
     test_autonomous_lifting_pipeline()
     print("test_autonomous_lifting_pipeline passed")
 

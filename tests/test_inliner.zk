@@ -1,4 +1,4 @@
-// cluster-llvm: Function Inliner test suite
+// CL-IL: Function Inliner test suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -48,9 +48,9 @@ fn test_function_inlining():
     print("Function Inlining Verified: Call to @add_five was successfully inlined into @main_calc.")
 
 fn main():
-    print("Testing cluster-llvm (Function Inliner Optimization Pass)...")
+    print("Testing CL-IL (Function Inliner Optimization Pass)...")
     test_function_inlining()
     print("test_function_inlining passed")
 
     print("")
-    print("✓ All tests passed for cluster-llvm Function Inliner!")
+    print("✓ All tests passed for CL-IL Function Inliner!")

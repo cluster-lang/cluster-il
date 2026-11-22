@@ -1,4 +1,4 @@
-// cluster-llvm: Struct GEP & PHI Node test suite
+// CL-IL: Struct GEP & PHI Node test suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -82,7 +82,7 @@ fn test_phi_node_execution():
     print("SSA PHI Node Resolution Verified: flag=1 -> 100, flag=0 -> 200.")
 
 fn main():
-    print("Testing cluster-llvm (Struct GEP & SSA PHI Resolution)...")
+    print("Testing CL-IL (Struct GEP & SSA PHI Resolution)...")
     test_struct_gep_memory()
     print("test_struct_gep_memory passed")
 
@@ -90,4 +90,4 @@ fn main():
     print("test_phi_node_execution passed")
 
     print("")
-    print("✓ All tests passed for cluster-llvm GEP & PHI Subsystems!")
+    print("✓ All tests passed for CL-IL GEP & PHI Subsystems!")

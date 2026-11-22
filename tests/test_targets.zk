@@ -1,4 +1,4 @@
-// cluster-llvm: Multi-Target Hardware Emitter test suite
+// CL-IL: Multi-Target Hardware Emitter test suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -45,9 +45,9 @@ fn test_hardware_targets():
     print(wasm_wat)
 
 fn main():
-    print("Testing cluster-llvm (Multi-Target Hardware Emitters)...")
+    print("Testing CL-IL (Multi-Target Hardware Emitters)...")
     test_hardware_targets()
     print("test_hardware_targets passed")
 
     print("")
-    print("✓ All tests passed for cluster-llvm Hardware Targets (x86_64, ARM64, WASM)!")
+    print("✓ All tests passed for CL-IL Hardware Targets (x86_64, ARM64, WASM)!")

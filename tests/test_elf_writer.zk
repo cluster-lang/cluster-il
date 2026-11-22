@@ -1,4 +1,4 @@
-// cluster-llvm: Direct ELF64 Object File Binary Writer Test Suite
+// CL-IL: Direct ELF64 Object File Binary Writer Test Suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -44,7 +44,7 @@ fn test_direct_elf64_generation():
     print("Direct ELF64 Generation Verified: " + to_text(bytes_written) + " valid ELF bytes generated directly from Cluster!")
 
 fn main():
-    print("Testing cluster-llvm (Phase 2: Direct Binary ELF64 Writer)...")
+    print("Testing CL-IL (Phase 2: Direct Binary ELF64 Writer)...")
     test_direct_elf64_generation()
     print("test_direct_elf64_generation passed")
 

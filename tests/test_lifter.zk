@@ -1,4 +1,4 @@
-// cluster-llvm: Lifter and Optimization verification test suite
+// CL-IL: Lifter and Optimization verification test suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -59,7 +59,7 @@ fn test_decompiler():
     print(decompiled_code)
 
 fn main():
-    print("Testing cluster-llvm (Lifter & Transformations)...")
+    print("Testing CL-IL (Lifter & Transformations)...")
     test_const_folding()
     print("test_const_folding passed")
 
@@ -67,4 +67,4 @@ fn main():
     print("test_decompiler passed")
 
     print("")
-    print("✓ All tests passed for cluster-llvm Lifter & Transforms!")
+    print("✓ All tests passed for CL-IL Lifter & Transforms!")

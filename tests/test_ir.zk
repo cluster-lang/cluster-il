@@ -1,4 +1,4 @@
-// cluster-llvm test suite: IR and Builder verification
+// CL-IL test suite: IR and Builder verification
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -66,7 +66,7 @@ fn test_instructions_and_builder():
     print(ir_output)
 
 fn main():
-    print("Testing cluster-llvm (Pure Native LLVM IR & Builder)...")
+    print("Testing CL-IL (Pure Native LLVM IR & Builder)...")
     test_types()
     print("test_types passed")
 
@@ -74,4 +74,4 @@ fn main():
     print("test_instructions_and_builder passed")
 
     print("")
-    print("✓ All tests passed for cluster-llvm IR core!")
+    print("✓ All tests passed for CL-IL IR core!")

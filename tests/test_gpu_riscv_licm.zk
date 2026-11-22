@@ -1,4 +1,4 @@
-// cluster-llvm: GPU (NVPTX), RISC-V & LICM Advanced test suite
+// CL-IL: GPU (NVPTX), RISC-V & LICM Advanced test suite
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
@@ -92,7 +92,7 @@ fn test_licm_pass():
     print("LICM Pass Verified: 1 loop-invariant computation successfully hoisted out of loop body.")
 
 fn main():
-    print("Testing cluster-llvm (GPU NVPTX, RISC-V & LICM Pass)...")
+    print("Testing CL-IL (GPU NVPTX, RISC-V & LICM Pass)...")
     test_gpu_ptx_generation()
     print("test_gpu_ptx_generation passed")
 
@@ -103,4 +103,4 @@ fn main():
     print("test_licm_pass passed")
 
     print("")
-    print("✓ All tests passed for cluster-llvm Advanced GPU, RISC-V & LICM Pipeline!")
+    print("✓ All tests passed for CL-IL Advanced GPU, RISC-V & LICM Pipeline!")

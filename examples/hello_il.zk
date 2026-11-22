@@ -1,0 +1,35 @@
+// CL-IL Example: Construct and Dump an Intermediate Language Function
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+
+fn main():
+    print("==============================================================")
+    print("     Cluster Intermediate Language (CL-IL) API Example        ")
+    print("==============================================================")
+    m: Module := module_new("sample.clil")
+    f: Function := func_new("calculate_sum", TYPE_I64)
+    func_add_param(f, "a", TYPE_I64)
+    func_add_param(f, "b", TYPE_I64)
+
+    entry_bb: BasicBlock := bb_new("entry")
+    v_a := val_reg("a", TYPE_I64)
+    v_b := val_reg("b", TYPE_I64)
+    inst_add := Instruction(OP_ADD, "sum", TYPE_I64, v_a, v_b, "", "")
+    bb_add_inst(entry_bb, inst_add)
+
+    v_sum := val_reg("sum", TYPE_I64)
+    inst_ret := Instruction(OP_RET, "", TYPE_I64, v_sum, v_sum, "", "")
+    bb_add_inst(entry_bb, inst_ret)
+
+    func_add_block(f, entry_bb)
+    module_add_func(m, f)
+
+    print("Emitted CL-IL IR:")
+    print(module_dump(m))
+    print("==============================================================")
+    print("✓ CL-IL Example executed with 100% success!")
+    print("==============================================================")

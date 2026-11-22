@@ -14,7 +14,7 @@ CL-IL/
 ├── README.md                 # Complete architecture and usage documentation
 ├── src/
 │   ├── main.zk               # Unified demonstration and pipeline driver
-│   ├── llvm.zk               # Master unified facade
+│   ├── il.zk               # Master unified facade
 │   ├── ir/
 │   │   ├── types.zk          # Strongly typed LLVM type system (i1..i64, ptr, float, array, void)
 │   │   ├── instructions.zk   # LLVM opcodes (arithmetic, bitwise, icmp, memory, GEP, PHI, call)
