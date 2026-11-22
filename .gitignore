@@ -1,0 +1,7 @@
+# Build outputs and cache
+bin/
+*.o
+*.a
+*.so
+.cl_cache/
+.DS_Store

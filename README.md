@@ -1,6 +1,6 @@
-# Cluster LLVM (`cluster-llvm`)
+# Cluster Intermediate Language (`CL-IL`)
 
-Pure Native LLVM Intermediate Representation (IR), Builder, Text Parser, In-Memory Execution Engine, Advanced Optimization Pipeline (DCE, Constant Folding, Inlining, LICM), Multi-Target Hardware Assembly Emitter (x86_64, ARM64, WASM, RISC-V, NVIDIA CUDA PTX), and Decompilation Lifter written in **100% Pure Cluster Language (`.zk` / `.cl`)**.
+Pure Native Cluster Intermediate Language (CL-IL), IR Builder, Parser, In-Memory Execution Engine, Advanced SSA Optimization Pipeline (mem2reg, SROA, DCE, Constant Folding, Inlining, LICM, SIMD Vectorization), Multi-Target Hardware Assembly Emitter (x86_64, ARM64, WASM, RISC-V, NVIDIA CUDA PTX), and Direct Binary ELF64 Emitter written in **100% Pure Cluster Language (`.zk` / `.cl`)**.
 
 > 🚀 **100% Zero External Dependencies**: Does not link against `libLLVM.so` or external C++ runtimes. Compiles directly into native machine code with the Cluster compiler (`cl`).
 
@@ -9,7 +9,7 @@ Pure Native LLVM Intermediate Representation (IR), Builder, Text Parser, In-Memo
 ## 🏗️ Architecture Overview
 
 ```
-cluster-llvm/
+CL-IL/
 ├── package.zk                # Package manifest with CCFL v2.0 terms (v1.0.0)
 ├── README.md                 # Complete architecture and usage documentation
 ├── src/

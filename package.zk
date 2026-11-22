@@ -1,9 +1,9 @@
-// cluster-llvm Package Manifest
+// CL-IL Package Manifest
 // Contributor: Mohammad Zaid <zkalamgir@proton.me>
 // CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
 
-name := "cluster-llvm"
+name := "cl-il"
 version := "1.0.0"
-description := "Pure Native LLVM Intermediate Representation, Builder, Parser, In-Memory Execution Engine, Optimizer & Lifter in Cluster Language"
+description := "Pure Native Cluster Intermediate Language (CL-IL), Builder, Parser, In-Memory Execution Engine, SSA Optimizer & Multi-Target Hardware Emitter"
 main := "src/main.zk"
 license := "CCFL-2.0"
