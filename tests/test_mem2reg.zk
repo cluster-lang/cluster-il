@@ -1,0 +1,71 @@
+// cluster-llvm: Memory to Register (mem2reg) Test Suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/transform/passes/mem2reg.zk"
+import "../src/transform/const_fold.zk"
+import "../src/execution/interpreter.zk"
+
+fn test_mem2reg_basic():
+    m := module_new("mem2reg_test.ll")
+    f := func_new("stack_test", TYPE_I64)
+
+    bb := bb_new("entry")
+    // %x = alloca i64
+    vx := val_reg("x", TYPE_PTR)
+    bb_add_inst(bb, Instruction(OP_ALLOCA, "x", TYPE_I64, vx, vx, "", ""))
+
+    // store i64 100, ptr %x
+    c100 := val_const_int(TYPE_I64, 100)
+    bb_add_inst(bb, Instruction(OP_STORE, "", TYPE_VOID, c100, vx, "", ""))
+
+    // %v = load i64, ptr %x
+    vv := val_reg("v", TYPE_I64)
+    bb_add_inst(bb, Instruction(OP_LOAD, "v", TYPE_I64, vx, vx, "", ""))
+
+    // %res = add i64 %v, 50
+    c50 := val_const_int(TYPE_I64, 50)
+    bb_add_inst(bb, Instruction(OP_ADD, "res", TYPE_I64, vv, c50, "", ""))
+
+    // ret i64 %res
+    vres := val_reg("res", TYPE_I64)
+    bb_add_inst(bb, Instruction(OP_RET, "", TYPE_I64, vres, vres, "", ""))
+
+    func_add_block(f, bb)
+    module_add_func(m, f)
+
+    assert m.functions[0].blocks[0].instructions.len() == 5, "must have 5 instructions before mem2reg"
+
+    // Execute mem2reg
+    promoted := pass_mem2reg(m)
+    assert promoted == 1, "must promote 1 alloca"
+
+    remaining := m.functions[0].blocks[0].instructions.len()
+    assert remaining == 2, "must have 2 instructions (add and ret) after mem2reg"
+
+    // Verify add operand is now directly the constant 100
+    inst_add := m.functions[0].blocks[0].instructions[0]
+    assert inst_add.opcode == OP_ADD, "inst 0 must be ADD"
+    assert inst_add.op1.is_const == true, "op1 must be promoted to constant"
+    assert inst_add.op1.int_val == 100, "op1 must be 100"
+
+    // Run constant folding over the promoted SSA form
+    pass_const_folding(m)
+
+    // Execute via VM interpreter
+    empty_args: vector[int] := []
+    res := execute_function(m.functions[0], empty_args)
+    assert res == 150, "vm must return 150"
+
+    print("mem2reg verified: Stack alloca/load/store successfully promoted to pure SSA register!")
+
+fn main():
+    print("Testing cluster-llvm (Phase 1: mem2reg pass)...")
+    test_mem2reg_basic()
+    print("test_mem2reg_basic passed")
+
+    print("")
+    print("✓ All tests passed for Phase 1 mem2reg!")

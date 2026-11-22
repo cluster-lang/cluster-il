@@ -1,0 +1,65 @@
+// cluster-llvm: SIMD Auto-Vectorization Test Suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/transform/passes/vectorize.zk"
+import "../src/target/x86_64/emitter.zk"
+import "../src/target/aarch64/emitter.zk"
+
+fn test_simd_auto_vectorization():
+    m := module_new("simd_test.ll")
+    f := func_new("vector_add4", TYPE_VOID)
+
+    bb := bb_new("entry")
+
+    // Four scalar operations:
+    // %r0 = add i32 %a0, %b0
+    // %r1 = add i32 %a1, %b1
+    // %r2 = add i32 %a2, %b2
+    // %r3 = add i32 %a3, %b3
+    bb_add_inst(bb, Instruction(OP_ADD, "r0", TYPE_I32, val_reg("a0", TYPE_I32), val_reg("b0", TYPE_I32), "", ""))
+    bb_add_inst(bb, Instruction(OP_ADD, "r1", TYPE_I32, val_reg("a1", TYPE_I32), val_reg("b1", TYPE_I32), "", ""))
+    bb_add_inst(bb, Instruction(OP_ADD, "r2", TYPE_I32, val_reg("a2", TYPE_I32), val_reg("b2", TYPE_I32), "", ""))
+    bb_add_inst(bb, Instruction(OP_ADD, "r3", TYPE_I32, val_reg("a3", TYPE_I32), val_reg("b3", TYPE_I32), "", ""))
+
+    // ret void
+    bb_add_inst(bb, Instruction(OP_RET_VOID, "", TYPE_VOID, val_reg("", 0), val_reg("", 0), "", ""))
+
+    func_add_block(f, bb)
+    module_add_func(m, f)
+
+    assert m.functions[0].blocks[0].instructions.len() == 5, "must have 5 instructions initially"
+
+    // Execute Vectorization Pass
+    vec_count := pass_vectorize(m)
+    assert vec_count == 1, "must vectorize 1 set of 4 scalar ops"
+
+    new_count := m.functions[0].blocks[0].instructions.len()
+    assert new_count == 2, "must have 2 instructions (1 SIMD vec instruction + 1 ret)"
+
+    simd_inst := m.functions[0].blocks[0].instructions[0]
+    assert simd_inst.opcode == OP_VEC_ADD, "inst 0 opcode must be OP_VEC_ADD"
+
+    ir_text := inst_to_llvm_ir(simd_inst)
+    print("Vector IR Emitted: " + ir_text)
+
+    // Verify x86_64 codegen contains vaddps
+    x86_asm := emit_x86_function(m.functions[0])
+    assert string_contains(x86_asm, "vaddps"), "x86_64 asm must contain AVX instruction vaddps"
+
+    // Verify aarch64 codegen contains fadd v0.4s
+    arm_asm := emit_aarch64_function(m.functions[0])
+    assert string_contains(arm_asm, "fadd v0.4s"), "ARM64 asm must contain NEON instruction fadd v0.4s"
+
+    print("SIMD Auto-Vectorization Verified: 4 scalar ops collapsed into single AVX/NEON vector instruction!")
+
+fn main():
+    print("Testing cluster-llvm (Phase 3: SIMD Vectorization Engine)...")
+    test_simd_auto_vectorization()
+    print("test_simd_auto_vectorization passed")
+
+    print("")
+    print("✓ All tests passed for Phase 3 SIMD Vectorizer!")

@@ -1,0 +1,39 @@
+// cluster-llvm: Automated Lifter Pipeline Test Suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/lifter/pipeline.zk"
+
+fn test_autonomous_lifting_pipeline():
+    ir := "define i64 @calculate_polynomial(i64 %x, i64 %c) {\n"
+    ir = ir + "entry:\n"
+    ir = ir + "  %x2 = mul i64 %x, %x\n"
+    ir = ir + "  %term = mul i64 %x2, 5\n"
+    ir = ir + "  %res = add i64 %term, %c\n"
+    ir = ir + "  ret i64 %res\n"
+    ir = ir + "}\n"
+
+    res := lift_llvm_to_cluster(ir, "cl_polynomial")
+
+    assert res.function_count == 1, "must lift 1 function"
+    assert string_contains(res.cluster_source, "fn calculate_polynomial(x: int, c: int) -> int:"), "must have correct function signature"
+    assert string_contains(res.cluster_source, "x * x"), "must translate multiplication"
+    assert string_contains(res.cluster_source, "term + c"), "must translate addition"
+    assert string_contains(res.test_source, "test_cl_polynomial"), "must generate test suite"
+
+    // Test writing to disk
+    count := lift_and_write_package(ir, "cl_poly_out", "/tmp")
+    assert count == 1, "must write 1 lifted package"
+
+    content := file_read("/tmp/cl_poly_out.zk")
+    assert len(content) > 0, "written package must not be empty"
+
+    print("Autonomous Lifter Pipeline Verified: C/Rust LLVM IR successfully translated into pure Cluster source and test suite!")
+
+fn main():
+    print("Testing cluster-llvm (Phase 5: High-Throughput Autonomous Lifter)...")
+    test_autonomous_lifting_pipeline()
+    print("test_autonomous_lifting_pipeline passed")
+
+    print("")
+    print("✓ All tests passed for Phase 5 Autonomous Lifter!")

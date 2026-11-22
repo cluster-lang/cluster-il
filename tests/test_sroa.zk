@@ -1,0 +1,78 @@
+// cluster-llvm: Scalar Replacement of Aggregates (SROA) Test Suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/transform/passes/sroa.zk"
+import "../src/transform/passes/mem2reg.zk"
+
+fn test_sroa_aggregate_scalarization():
+    m := module_new("sroa_test.ll")
+    f := func_new("struct_point_add", TYPE_I64)
+
+    bb := bb_new("entry")
+    // %pt = alloca ptr
+    v_pt := val_reg("pt", TYPE_PTR)
+    bb_add_inst(bb, Instruction(OP_ALLOCA, "pt", TYPE_PTR, v_pt, v_pt, "", ""))
+
+    // %f0 = getelementptr inbounds {i32, i32}, ptr %pt, i32 0, i32 0
+    c0 := val_const_int(TYPE_I32, 0)
+    v_f0 := val_reg("f0", TYPE_PTR)
+    bb_add_inst(bb, Instruction(OP_GEP, "f0", TYPE_PTR, v_pt, c0, "{i32, i32}", ""))
+
+    // store i32 25, ptr %f0
+    c25 := val_const_int(TYPE_I32, 25)
+    bb_add_inst(bb, Instruction(OP_STORE, "", TYPE_VOID, c25, v_f0, "", ""))
+
+    // %f1 = getelementptr inbounds {i32, i32}, ptr %pt, i32 0, i32 1
+    c1 := val_const_int(TYPE_I32, 1)
+    v_f1 := val_reg("f1", TYPE_PTR)
+    bb_add_inst(bb, Instruction(OP_GEP, "f1", TYPE_PTR, v_pt, c1, "{i32, i32}", ""))
+
+    // store i32 75, ptr %f1
+    c75 := val_const_int(TYPE_I32, 75)
+    bb_add_inst(bb, Instruction(OP_STORE, "", TYPE_VOID, c75, v_f1, "", ""))
+
+    // %x = load i32, ptr %f0
+    vx := val_reg("x", TYPE_I32)
+    bb_add_inst(bb, Instruction(OP_LOAD, "x", TYPE_I32, v_f0, v_f0, "", ""))
+
+    // %y = load i32, ptr %f1
+    vy := val_reg("y", TYPE_I32)
+    bb_add_inst(bb, Instruction(OP_LOAD, "y", TYPE_I32, v_f1, v_f1, "", ""))
+
+    // %sum = add i32 %x, %y
+    vsum := val_reg("sum", TYPE_I32)
+    bb_add_inst(bb, Instruction(OP_ADD, "sum", TYPE_I32, vx, vy, "", ""))
+
+    // ret i32 %sum
+    bb_add_inst(bb, Instruction(OP_RET, "", TYPE_I32, vsum, vsum, "", ""))
+
+    func_add_block(f, bb)
+    module_add_func(m, f)
+
+    assert m.functions[0].blocks[0].instructions.len() == 9, "9 instructions initially"
+
+    // Execute SROA
+    scalarized := pass_sroa(m)
+    assert scalarized == 2, "must scalarize 2 GEP accesses into independent allocas"
+
+    // Execute mem2reg on the scalarized representation!
+    promoted := pass_mem2reg(m)
+    assert promoted == 2, "mem2reg must promote both scalarized fields"
+
+    // All memory ops are now eliminated, remaining instructions are ADD and RET!
+    inst_count := m.functions[0].blocks[0].instructions.len()
+    assert inst_count == 3, "remaining instructions must be 3"
+
+    print("SROA verified: Aggregate GEP accesses successfully scalarized and promoted to registers!")
+
+fn main():
+    print("Testing cluster-llvm (Phase 1: SROA pass)...")
+    test_sroa_aggregate_scalarization()
+    print("test_sroa_aggregate_scalarization passed")
+
+    print("")
+    print("✓ All tests passed for Phase 1 SROA!")

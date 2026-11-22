@@ -1,0 +1,52 @@
+// cluster-llvm: Direct ELF64 Object File Binary Writer Test Suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/target/binary/elf64.zk"
+
+fn test_direct_elf64_generation():
+    writer := elf_writer_new(EM_X86_64)
+
+    // Construct machine code for:
+    // fn add42(rdi: i64) -> i64:
+    //   mov %rdi, %rax     ; 48 89 f8
+    //   add $42, %rax      ; 48 83 c0 2a
+    //   ret                ; c3
+    code := buf_new()
+    buf_push_u8(code, 72)   // 0x48
+    buf_push_u8(code, 137)  // 0x89
+    buf_push_u8(code, 248)  // 0xf8
+    buf_push_u8(code, 72)   // 0x48
+    buf_push_u8(code, 131)  // 0x83
+    buf_push_u8(code, 192)  // 0xc0
+    buf_push_u8(code, 42)   // 0x2a
+    buf_push_u8(code, 195)  // 0xc3
+
+    // Add .text section (SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR)
+    elf_add_section(writer, ".text", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR, code, 16, 0)
+
+    // Add exported symbol 'add42'
+    elf_add_symbol(writer, "add42", 1, 0, code.bytes.len(), true)
+
+    out_file := "/tmp/cluster_test_elf.o"
+    bytes_written := elf_write_object_file(writer, out_file)
+
+    assert bytes_written > 64, "ELF object file must contain header and sections"
+
+    bin := elf_build_binary(writer)
+    assert bin.bytes[0] == 127, "magic byte 0 must be 0x7f"
+    assert bin.bytes[1] == 69, "magic byte 1 must be 'E'"
+    assert bin.bytes[2] == 76, "magic byte 2 must be 'L'"
+    assert bin.bytes[3] == 70, "magic byte 3 must be 'F'"
+    assert bin.bytes[4] == 2, "class must be ELF64"
+    assert bin.bytes[5] == 1, "data must be little-endian"
+
+    print("Direct ELF64 Generation Verified: " + to_text(bytes_written) + " valid ELF bytes generated directly from Cluster!")
+
+fn main():
+    print("Testing cluster-llvm (Phase 2: Direct Binary ELF64 Writer)...")
+    test_direct_elf64_generation()
+    print("test_direct_elf64_generation passed")
+
+    print("")
+    print("✓ All tests passed for Phase 2 ELF64 Writer!")

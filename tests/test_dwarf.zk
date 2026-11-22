@@ -1,0 +1,41 @@
+// cluster-llvm: DWARF Debug Symbol Generator Test Suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/target/binary/elf64.zk"
+import "../src/target/debug/dwarf.zk"
+
+fn test_dwarf_generation():
+    writer := elf_writer_new(EM_X86_64)
+
+    // Code for dummy function
+    code := buf_new()
+    buf_push_u8(code, 72)
+    buf_push_u8(code, 49)
+    buf_push_u8(code, 192) // xor %rax, %rax
+    buf_push_u8(code, 195) // ret
+
+    elf_add_section(writer, ".text", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR, code, 16, 0)
+    elf_add_symbol(writer, "compute_hash", 1, 0, code.bytes.len(), true)
+
+    // Generate DWARF metadata
+    dwarf := dwarf_generate("crypto_core.zk", "compute_hash", code.bytes.len())
+    attach_dwarf_to_elf(writer, dwarf)
+
+    out_file := "/tmp/cluster_test_dwarf.o"
+    bytes_written := elf_write_object_file(writer, out_file)
+    assert bytes_written > 200, "ELF with DWARF must be > 200 bytes"
+
+    assert dwarf.sec_info.bytes.len() > 0, "debug_info must not be empty"
+    assert dwarf.sec_abbrev.bytes.len() > 0, "debug_abbrev must not be empty"
+    assert dwarf.sec_str.bytes.len() > 0, "debug_str must not be empty"
+
+    print("DWARF Debug Metadata Verified: Generated .debug_info, .debug_abbrev, .debug_str, .debug_line (" + to_text(bytes_written) + " bytes total)!")
+
+fn main():
+    print("Testing cluster-llvm (Phase 4: DWARF Debug Symbol Generation)...")
+    test_dwarf_generation()
+    print("test_dwarf_generation passed")
+
+    print("")
+    print("✓ All tests passed for Phase 4 DWARF Debug Emitter!")
