@@ -1,0 +1,77 @@
+// cluster-llvm test suite: IR and Builder verification
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+
+fn test_types():
+    t_int := type_i64()
+    assert type_is_integer(t_int) == true, "i64 must be integer"
+    assert type_to_string(t_int) == "i64", "i64 string mismatch"
+
+    t_ptr := type_ptr()
+    assert type_is_pointer(t_ptr) == true, "ptr must be pointer"
+    assert type_to_string(t_ptr) == "ptr", "ptr string mismatch"
+
+    t_arr := type_array(TYPE_I32, 10)
+    assert type_to_string(t_arr) == "[10 x i32]", "array string mismatch"
+
+fn test_instructions_and_builder():
+    m: Module := module_new("test_module.ll")
+    f: Function := func_new("add_and_compare", TYPE_I64)
+    func_add_param(f, "a", TYPE_I64)
+    func_add_param(f, "b", TYPE_I64)
+
+    entry_bb: BasicBlock := bb_new("entry")
+
+    // %t0 = add i64 %a, %b
+    v_a := val_reg("a", TYPE_I64)
+    v_b := val_reg("b", TYPE_I64)
+    inst_add := Instruction(OP_ADD, "t0", TYPE_I64, v_a, v_b, "", "")
+    bb_add_inst(entry_bb, inst_add)
+
+    // %cmp = icmp slt i64 %t0, 100
+    v_t0 := val_reg("t0", TYPE_I64)
+    v_100 := val_const_int(TYPE_I64, 100)
+    inst_cmp := Instruction(OP_ICMP_SLT, "cmp", TYPE_I1, v_t0, v_100, "", "")
+    bb_add_inst(entry_bb, inst_cmp)
+
+    // br i1 %cmp, label %then, label %else
+    v_cmp := val_reg("cmp", TYPE_I1)
+    inst_br_cond := Instruction(OP_BR_COND, "", TYPE_VOID, v_cmp, v_cmp, "then", "else")
+    bb_add_inst(entry_bb, inst_br_cond)
+
+    func_add_block(f, entry_bb)
+
+    // then block: ret i64 %t0
+    then_bb: BasicBlock := bb_new("then")
+    inst_ret1 := Instruction(OP_RET, "", TYPE_I64, v_t0, v_t0, "", "")
+    bb_add_inst(then_bb, inst_ret1)
+    func_add_block(f, then_bb)
+
+    // else block: ret i64 100
+    else_bb: BasicBlock := bb_new("else")
+    inst_ret2 := Instruction(OP_RET, "", TYPE_I64, v_100, v_100, "", "")
+    bb_add_inst(else_bb, inst_ret2)
+    func_add_block(f, else_bb)
+
+    module_add_func(m, f)
+
+    ir_output := module_dump(m)
+    assert len(ir_output) > 50, "IR output must not be empty"
+
+    print("Emitted LLVM IR Sample:")
+    print(ir_output)
+
+fn main():
+    print("Testing cluster-llvm (Pure Native LLVM IR & Builder)...")
+    test_types()
+    print("test_types passed")
+
+    test_instructions_and_builder()
+    print("test_instructions_and_builder passed")
+
+    print("")
+    print("✓ All tests passed for cluster-llvm IR core!")

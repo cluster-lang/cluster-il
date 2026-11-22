@@ -1,0 +1,70 @@
+// cluster-llvm: Lifter and Optimization verification test suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/transform/const_fold.zk"
+import "../src/lifter/decompiler.zk"
+
+fn test_const_folding():
+    m: Module := module_new("fold_test.ll")
+    f: Function := func_new("compute_static", TYPE_I64)
+    bb: BasicBlock := bb_new("entry")
+
+    v1 := val_const_int(TYPE_I64, 40)
+    v2 := val_const_int(TYPE_I64, 2)
+    inst_add := Instruction(OP_ADD, "res", TYPE_I64, v1, v2, "", "")
+    bb_add_inst(bb, inst_add)
+    func_add_block(f, bb)
+    module_add_func(m, f)
+
+    pass_const_folding(m)
+
+    folded_inst := m.functions[0].blocks[0].instructions[0]
+    assert folded_inst.op1.is_const == true, "folded op1 must be const"
+    assert folded_inst.op1.int_val == 42, "40 + 2 must fold to 42"
+
+fn test_decompiler():
+    f: Function := func_new("multiply_and_add", TYPE_I64)
+    func_add_param(f, "x", TYPE_I64)
+    func_add_param(f, "y", TYPE_I64)
+
+    bb: BasicBlock := bb_new("entry")
+    vx := val_reg("x", TYPE_I64)
+    vy := val_reg("y", TYPE_I64)
+
+    // t0 = mul x, y
+    i1 := Instruction(OP_MUL, "t0", TYPE_I64, vx, vy, "", "")
+    bb_add_inst(bb, i1)
+
+    // t1 = add t0, 10
+    vt0 := val_reg("t0", TYPE_I64)
+    c10 := val_const_int(TYPE_I64, 10)
+    i2 := Instruction(OP_ADD, "t1", TYPE_I64, vt0, c10, "", "")
+    bb_add_inst(bb, i2)
+
+    // ret t1
+    vt1 := val_reg("t1", TYPE_I64)
+    i3 := Instruction(OP_RET, "", TYPE_I64, vt1, vt1, "", "")
+    bb_add_inst(bb, i3)
+
+    func_add_block(f, bb)
+
+    decompiled_code := decompile_function(f)
+    assert len(decompiled_code) > 20, "decompiled code must not be empty"
+
+    print("Decompiled Cluster Code:")
+    print(decompiled_code)
+
+fn main():
+    print("Testing cluster-llvm (Lifter & Transformations)...")
+    test_const_folding()
+    print("test_const_folding passed")
+
+    test_decompiler()
+    print("test_decompiler passed")
+
+    print("")
+    print("✓ All tests passed for cluster-llvm Lifter & Transforms!")
