@@ -1,0 +1,63 @@
+// cluster-llvm: LLVM IR Parser verification test suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/parser/lexer.zk"
+import "../src/parser/parser.zk"
+
+fn test_lexer():
+    src := "define i64 @my_func(i64 %a, i32 42) { entry: %t = add i64 %a, 1 ret i64 %t }"
+    tokens := tokenize(src)
+    assert tokens.len() > 10, "tokens count must be > 10"
+    assert tokens[0].kind == TOK_IDENT, "first token must be define"
+    assert tokens[0].text == "define", "first token text must be define"
+
+fn test_parser_module():
+    src := "define i64 @calc_sum(i64 %x, i64 %y) {\n"
+    src = src + "entry:\n"
+    src = src + "  %sum = add i64 %x, %y\n"
+    src = src + "  %diff = sub i64 %x, 5\n"
+    src = src + "  ret i64 %sum\n"
+    src = src + "}\n"
+
+    m := parse_module(src)
+    assert m.functions.len() == 1, "module must have 1 function"
+
+    f := m.functions[0]
+    assert f.name == "calc_sum", "function name must be calc_sum"
+    assert f.param_names.len() == 2, "must have 2 params"
+    assert f.param_names[0] == "x", "param 0 must be x"
+    assert f.param_names[1] == "y", "param 1 must be y"
+
+    assert f.blocks.len() == 1, "must have 1 block"
+    bb := f.blocks[0]
+    assert bb.name == "entry", "block name must be entry"
+    assert bb.instructions.len() == 3, "must have 3 instructions"
+
+    inst0 := bb.instructions[0]
+    assert inst0.opcode == OP_ADD, "inst 0 must be ADD"
+    assert inst0.result_name == "sum", "inst 0 result must be sum"
+
+    inst1 := bb.instructions[1]
+    assert inst1.opcode == OP_SUB, "inst 1 must be SUB"
+    assert inst1.result_name == "diff", "inst 1 result must be diff"
+
+    inst2 := bb.instructions[2]
+    assert inst2.opcode == OP_RET, "inst 2 must be RET"
+
+    print("Parsed LLVM Function:")
+    print("Function @" + f.name + " with " + to_text(bb.instructions.len()) + " instructions successfully verified.")
+
+fn main():
+    print("Testing cluster-llvm (LLVM IR Lexer & Parser)...")
+    test_lexer()
+    print("test_lexer passed")
+
+    test_parser_module()
+    print("test_parser_module passed")
+
+    print("")
+    print("✓ All tests passed for cluster-llvm Parser!")

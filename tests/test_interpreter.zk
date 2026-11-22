@@ -1,0 +1,81 @@
+// cluster-llvm: Interpreter Execution Engine test suite
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/parser/lexer.zk"
+import "../src/parser/parser.zk"
+import "../src/execution/interpreter.zk"
+
+fn test_direct_execution():
+    f := func_new("branch_calc", TYPE_I64)
+    func_add_param(f, "a", TYPE_I64)
+    func_add_param(f, "b", TYPE_I64)
+
+    entry_bb := bb_new("entry")
+    va := val_reg("a", TYPE_I64)
+    vb := val_reg("b", TYPE_I64)
+
+    // sum = a + b
+    bb_add_inst(entry_bb, Instruction(OP_ADD, "sum", TYPE_I64, va, vb, "", ""))
+
+    // cmp = sum < 50
+    v_sum := val_reg("sum", TYPE_I64)
+    c50 := val_const_int(TYPE_I64, 50)
+    bb_add_inst(entry_bb, Instruction(OP_ICMP_SLT, "cmp", TYPE_I1, v_sum, c50, "", ""))
+
+    // br i1 cmp, less, greater
+    v_cmp := val_reg("cmp", TYPE_I1)
+    bb_add_inst(entry_bb, Instruction(OP_BR_COND, "", TYPE_VOID, v_cmp, v_cmp, "less", "greater"))
+    func_add_block(f, entry_bb)
+
+    // less: ret 1
+    less_bb := bb_new("less")
+    c1 := val_const_int(TYPE_I64, 1)
+    bb_add_inst(less_bb, Instruction(OP_RET, "", TYPE_I64, c1, c1, "", ""))
+    func_add_block(f, less_bb)
+
+    // greater: ret 2
+    greater_bb := bb_new("greater")
+    c2 := val_const_int(TYPE_I64, 2)
+    bb_add_inst(greater_bb, Instruction(OP_RET, "", TYPE_I64, c2, c2, "", ""))
+    func_add_block(f, greater_bb)
+
+    // 10 + 20 = 30 (< 50) -> expect 1
+    args1: vector[int] := [10, 20]
+    res1 := execute_function(f, args1)
+    assert res1 == 1, "expected 1 for 10 + 20"
+
+    // 40 + 30 = 70 (>= 50) -> expect 2
+    args2: vector[int] := [40, 30]
+    res2 := execute_function(f, args2)
+    assert res2 == 2, "expected 2 for 40 + 30"
+
+fn test_parse_and_execute():
+    src := "define i64 @multiply_by_five(i64 %val) {\n"
+    src = src + "entry:\n"
+    src = src + "  %res = mul i64 %val, 5\n"
+    src = src + "  ret i64 %res\n"
+    src = src + "}\n"
+
+    m := parse_module(src)
+    assert m.functions.len() == 1, "module must have 1 function"
+
+    args: vector[int] := [12]
+    res := execute_function(m.functions[0], args)
+    assert res == 60, "12 * 5 must be 60"
+    print("Parsed LLVM Function executed in interpreter:")
+    print("@multiply_by_five(12) returned " + to_text(res) + " (Expected: 60)")
+
+fn main():
+    print("Testing cluster-llvm (In-Memory Interpreter Execution Engine)...")
+    test_direct_execution()
+    print("test_direct_execution passed")
+
+    test_parse_and_execute()
+    print("test_parse_and_execute passed")
+
+    print("")
+    print("✓ All tests passed for cluster-llvm Interpreter Engine!")
