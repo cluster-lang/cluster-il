@@ -1,8 +1,9 @@
 # Private compiler IR source implementation
 /src/
 
-# Build outputs and cache
-bin/
+# Build outputs and cache (keep precompiled bin/cl-il binary)
+bin/*
+!bin/cl-il
 *.o
 *.a
 *.so
