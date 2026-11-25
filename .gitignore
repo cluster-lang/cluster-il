@@ -1,3 +1,6 @@
+# Private compiler IR source implementation
+/src/
+
 # Build outputs and cache
 bin/
 *.o
