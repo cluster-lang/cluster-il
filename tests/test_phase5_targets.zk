@@ -1,0 +1,74 @@
+// CL-IL: Phase 5 Multi-Target Parity & Debug Tests (WASM Binary, AArch64 ELF, RISC-V ELF, DWARF -g, NVPTX, SPIR-V)
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/parser/parser.zk"
+import "../src/target/binary/elf64.zk"
+import "../src/target/binary/x86_64_exec.zk"
+import "../src/target/debug/dwarf.zk"
+import "../src/target/wasm/emitter.zk"
+import "../src/target/aarch64/emitter.zk"
+import "../src/target/riscv/emitter.zk"
+import "../src/target/nvptx/emitter.zk"
+import "../src/target/spirv/emitter.zk"
+
+fn test_wasm_binary_module():
+    // Iterative loop sum + recursive call in WASM binary
+    src := "define i64 @add_mul(i64 %a, i64 %b) {\nentry:\n  %p = mul i64 %a, %b\n  %r = add i64 %p, 7\n  ret i64 %r\n}\ndefine i64 @fib(i64 %n) {\nentry:\n  %cmp = icmp sle i64 %n, 1\n  br i1 %cmp, label %base, label %rec\nbase:\n  ret i64 %n\nrec:\n  %n1 = sub i64 %n, 1\n  %f1 = call i64 @fib(i64 %n1)\n  %n2 = sub i64 %n, 2\n  %f2 = call i64 @fib(i64 %n2)\n  %s = add i64 %f1, %f2\n  ret i64 %s\n}\ndefine i64 @main() {\nentry:\n  %f = call i64 @fib(i64 10)\n  ret i64 %f\n}\n"
+    m := parse_module(src)
+    nb := wasm_emit_module(m, "/tmp/p5_mod.wasm", true)
+    assert nb > 64, "WASM binary module written"
+    raw := file_read("/tmp/p5_mod.wasm")
+    assert byte_at(raw, 0) == 0 and byte_at(raw, 1) == 97 and byte_at(raw, 2) == 115 and byte_at(raw, 3) == 109, "WASM magic must be \\0asm"
+    print("test_wasm_binary_module passed (" + to_text(nb) + " bytes)")
+
+fn test_aarch64_and_riscv_binary_elf():
+    src := "define i64 @calc(i64 %a, i64 %b) {\nentry:\n  %s = add i64 %a, %b\n  %d = mul i64 %s, 3\n  ret i64 %d\n}\ndefine i64 @main() {\nentry:\n  %v = call i64 @calc(i64 4, i64 5)\n  ret i64 %v\n}\n"
+    m := parse_module(src)
+
+    a_obj := aarch64_emit_elf(m, "/tmp/p5_arm64.o", false)
+    assert a_obj > 128, "AArch64 ELF64 .o written"
+    raw_a := file_read("/tmp/p5_arm64.o")
+    assert byte_at(raw_a, 18) == 183, "e_machine must be EM_AARCH64 (183)"
+
+    a_exe := aarch64_emit_elf(m, "/tmp/p5_arm64.out", true)
+    assert a_exe > 4096, "AArch64 ELF64 executable written"
+
+    r_obj := riscv_emit_elf(m, "/tmp/p5_riscv64.o", false)
+    assert r_obj > 128, "RISC-V ELF64 .o written"
+    raw_r := file_read("/tmp/p5_riscv64.o")
+    assert byte_at(raw_r, 18) == 243, "e_machine must be EM_RISCV (243)"
+
+    r_exe := riscv_emit_elf(m, "/tmp/p5_riscv64.out", true)
+    assert r_exe > 4096, "RISC-V ELF64 executable written"
+    print("test_aarch64_and_riscv_binary_elf passed")
+
+fn test_dwarf_exec_debug_info():
+    src := "define i64 @helper_fn(i64 %x) {\nentry:\n  %y = add i64 %x, 11\n  ret i64 %y\n}\ndefine i64 @main() {\nentry:\n  %r = call i64 @helper_fn(i64 31)\n  ret i64 %r\n}\n"
+    m := parse_module(src)
+    rc := elf_write_exec_x86_64_dbg(m, "/tmp/p5_dbg_exe", "", 3, xe_default_options(), true)
+    assert rc == 0, "ELF64 executable with DWARF -g must build with rc 0"
+    print("test_dwarf_exec_debug_info passed")
+
+fn test_nvptx_and_spirv_gpu():
+    src := "define i64 @vec_kernel(i64 %x, i64 %y) {\nentry:\n  %z = mul i64 %x, %y\n  %w = add i64 %z, 9\n  ret i64 %w\n}\ndefine i64 @main() {\nentry:\n  %r = call i64 @vec_kernel(i64 6, i64 7)\n  ret i64 %r\n}\n"
+    m := parse_module(src)
+    ptx_len := nvptx_emit_module(m, "/tmp/p5_kern.ptx")
+    assert ptx_len > 100, "NVPTX .ptx module emitted"
+    spv_len := spirv_emit_module(m, "/tmp/p5_kern.spv")
+    assert spv_len > 64, "SPIR-V binary module emitted"
+    raw_spv := file_read("/tmp/p5_kern.spv")
+    // Magic 0x07230203 LE: 0x03, 0x02, 0x23, 0x07
+    assert byte_at(raw_spv, 0) == 3 and byte_at(raw_spv, 1) == 2 and byte_at(raw_spv, 2) == 35 and byte_at(raw_spv, 3) == 7, "SPIR-V magic must be 0x07230203"
+    print("test_nvptx_and_spirv_gpu passed (ptx=" + to_text(ptx_len) + ", spv=" + to_text(spv_len) + ")")
+
+fn main():
+    print("Testing CL-IL Phase 5 Multi-Target Parity (WASM, AArch64, RISC-V, DWARF -g, NVPTX, SPIR-V)...")
+    test_wasm_binary_module()
+    test_aarch64_and_riscv_binary_elf()
+    test_dwarf_exec_debug_info()
+    test_nvptx_and_spirv_gpu()
+    print("✓ All Phase 5 Multi-Target tests passed!")

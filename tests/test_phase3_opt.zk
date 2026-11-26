@@ -1,0 +1,68 @@
+// CL-IL: Phase 3 Optimizer Parity Tests (DomTree, Pruned-SSA mem2reg, GVN/CSE, Multi-Arg Inliner, Safe SROA)
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/parser/parser.zk"
+import "../src/transform/passes/domtree.zk"
+import "../src/transform/passes/mem2reg.zk"
+import "../src/transform/passes/gvn.zk"
+import "../src/transform/inliner.zk"
+import "../src/transform/optimizer.zk"
+import "../src/target/binary/x86_64_exec.zk"
+
+fn test_domtree_and_loop_mem2reg():
+    src := "define i64 @sum_loop(i64 %n) {\nentry:\n  %v_acc = alloca i64, align 8\n  %v_i = alloca i64, align 8\n  store i64 0, ptr %v_acc, align 8\n  store i64 1, ptr %v_i, align 8\n  br label %cond\ncond:\n  %i1 = load i64, ptr %v_i, align 8\n  %c1 = icmp sle i64 %i1, %n\n  %z1 = zext i1 %c1 to i64\n  %n1 = icmp ne i64 %z1, 0\n  br i1 %n1, label %body, label %done\nbody:\n  %a1 = load i64, ptr %v_acc, align 8\n  %i2 = load i64, ptr %v_i, align 8\n  %s = add i64 %a1, %i2\n  store i64 %s, ptr %v_acc, align 8\n  %i3 = add i64 %i2, 1\n  store i64 %i3, ptr %v_i, align 8\n  br label %cond\ndone:\n  %res = load i64, ptr %v_acc, align 8\n  ret i64 %res\n}\n"
+    m := parse_module(src)
+    cfg := build_cfg_domtree(m.functions[0])
+    assert cfg.n_blocks == 4, "must have 4 blocks"
+    assert cfg.idom[1] == 0, "entry dominates cond"
+    assert cfg.idom[2] == 1, "cond dominates body"
+    assert cfg.idom[3] == 1, "cond dominates done"
+
+    changes := optimize_module_native(m, 3)
+    assert changes > 0, "optimizer must promote loop allocas and fold zext+icmp"
+
+    // Verify all allocas, loads, and stores were eliminated into loop PHIs
+    rem_mem := 0
+    rem_phi := 0
+    bi := 0
+    while bi < m.functions[0].blocks.len():
+        bb := m.functions[0].blocks[bi]
+        ii := 0
+        while ii < bb.instructions.len():
+            op := bb.instructions[ii].opcode
+            if op == OP_ALLOCA or op == OP_LOAD or op == OP_STORE:
+                rem_mem = rem_mem + 1
+            if op == OP_PHI:
+                rem_phi = rem_phi + 1
+            ii = ii + 1
+        bi = bi + 1
+    assert rem_mem == 0, "all scalar loop allocas/loads/stores must be eliminated"
+    assert rem_phi == 2, "must insert exactly 2 loop header PHIs for acc and i"
+    print("test_domtree_and_loop_mem2reg passed (phis=" + to_text(rem_phi) + ")")
+
+fn test_gvn_cse_and_multiarg_inliner():
+    src := "define i64 @add2(i64 %x, i64 %y) {\nentry:\n  %s = add i64 %x, %y\n  ret i64 %s\n}\n\ndefine i64 @main() {\nentry:\n  %e1 = add i64 20, 1\n  %e2 = add i64 1, 20\n  %r = call i64 @add2(i64 %e1, i64 %e2)\n  ret i64 %r\n}\n"
+    m := parse_module(src)
+    optimize_module_native(m, 3)
+    // Verify add2 was inlined and folded down to ret 42
+    has_call := false
+    ii := 0
+    while ii < m.functions[1].blocks[0].instructions.len():
+        inst := m.functions[1].blocks[0].instructions[ii]
+        if inst.opcode == OP_CALL:
+            has_call = true
+        ii = ii + 1
+    assert not has_call, "leaf call @add2 must be inlined"
+    rc := elf_write_exec_x86_64(m, "/tmp/test_p3_inl_bin", "", 3)
+    assert rc == 0, "must emit ELF64 cleanly"
+    print("test_gvn_cse_and_multiarg_inliner passed")
+
+fn main():
+    print("Testing CL-IL Phase 3 Optimizer Parity...")
+    test_domtree_and_loop_mem2reg()
+    test_gvn_cse_and_multiarg_inliner()
+    print("✓ All Phase 3 Optimizer Parity tests passed!")

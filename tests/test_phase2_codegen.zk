@@ -1,0 +1,53 @@
+// CL-IL: Phase 2 Codegen (RegAlloc, SSE2 Floats, 7+ Stack Args, Atomics, OP_CALL_PTR, Tail Calls) Tests
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/parser/parser.zk"
+import "../src/transform/dce.zk"
+import "../src/target/x86_64/regalloc.zk"
+import "../src/target/binary/x86_64_exec.zk"
+
+fn test_regalloc_linear_scan():
+    src := "define i64 @loop_sum(i64 %n) {\nentry:\n  br label %cond\ncond:\n  %i = phi i64 [ 0, %entry ], [ %next, %body ]\n  %acc = phi i64 [ 0, %entry ], [ %acc_n, %body ]\n  %cmp = icmp slt i64 %i, %n\n  br i1 %cmp, label %body, label %done\nbody:\n  %acc_n = add i64 %acc, %i\n  %next = add i64 %i, 1\n  br label %cond\ndone:\n  ret i64 %acc\n}\n"
+    m := parse_module(src)
+    assert m.functions.len() == 1, "must parse loop_sum"
+    p0 := ra_build_plan(m.functions[0], 0)
+    assert p0.saved_count == 0, "opt_level 0 must keep saved_count == 0"
+    p3 := ra_build_plan(m.functions[0], 3)
+    assert p3.var_names.len() >= 3 and ra_get_reg(p3, "n") >= 0, "regalloc must assign physical GPRs to hot PHI/param vars"
+    assert ra_get_reg(p3, "i") >= 0, "loop induction variable %i must get physical GPR"
+    assert ra_get_reg(p3, "acc") >= 0, "loop accumulator %acc must get physical GPR"
+    print("test_regalloc_linear_scan passed (saved=" + to_text(p3.saved_count) + ")")
+
+fn test_dce_preserves_phase2_side_effects():
+    src := "define i64 @atom_fn(ptr %p, ptr %fp, i64 %v) {\nentry:\n  store atomic i64 10, ptr %p release, align 8\n  %old = atomicrmw add ptr %p, i64 %v release, align 8\n  %cur = load atomic i64, ptr %p acquire, align 8\n  %res = call i64 %fp(i64 %cur)\n  ret i64 %res\n}\n"
+    m := parse_module(src)
+    elim := pass_dce(m)
+    assert elim == 0, "DCE must preserve atomic store/rmw/load and OP_CALL_PTR callee load"
+    print("test_dce_preserves_phase2_side_effects passed")
+
+fn test_phase2_exec_emission():
+    src := "declare ptr @malloc(i64)\ndeclare void @free(ptr)\n\ndefine i64 @add10(i64 %x) {\nentry:\n  %r = add i64 %x, 10\n  ret i64 %r\n}\n\ndefine i64 @call_fn(ptr %fp, i64 %arg) {\nentry:\n  %v = call i64 %fp(i64 %arg)\n  ret i64 %v\n}\n\ndefine i64 @sum7(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g) {\nentry:\n  %s1 = add i64 %a, %b\n  %s2 = add i64 %s1, %c\n  %s3 = add i64 %s2, %d\n  %s4 = add i64 %s3, %e\n  %s5 = add i64 %s4, %f\n  %s6 = add i64 %s5, %g\n  ret i64 %s6\n}\n\ndefine i64 @main() {\nentry:\n  %p = call ptr @malloc(i64 8)\n  store atomic i64 5, ptr %p release, align 8\n  %old = atomicrmw add ptr %p, i64 7 release, align 8\n  %cur = load atomic i64, ptr %p acquire, align 8\n  %c1 = call i64 @call_fn(ptr @add10, i64 %cur)\n  call void @free(ptr %p)\n  %s = call i64 @sum7(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7)\n  %df = fmul double 3.5, 2.0\n  %di = fptosi double %df to i64\n  %tot = add i64 %c1, %s\n  %tot2 = add i64 %tot, %di\n  %tot3 = add i64 %tot2, %old\n  ret i64 %tot3\n}\n"
+    m := parse_module(src)
+    rc := elf_write_exec_x86_64(m, "/tmp/test_p2_codegen_bin", "", 3)
+    assert rc == 0, "elf_write_exec_x86_64 must succeed for Phase 2 ops"
+    print("test_phase2_exec_emission passed")
+
+fn test_simd_vector_fallback():
+    src := "define double @vec_bad(ptr %a) {\nentry:\n  %va = load <8 x float>, ptr %a, align 1\n  %s = call float @llvm.vector.reduce.fadd.v8f32(float 0.0, <8 x float> %va)\n  %d = fpext float %s to double\n  ret double %d\n}\ndefine i64 @main() {\nentry:\n  %r = call double @vec_bad(ptr null)\n  ret i64 0\n}\n"
+    m := parse_module(src)
+    pass_dce(m)
+    rc := elf_write_exec_x86_64(m, "/tmp/test_p2_vec_fallback", "", 3)
+    assert rc == 3, "SIMD <8 x float> reachable function must return exit code 3 for clang fallback"
+    print("test_simd_vector_fallback passed")
+
+fn main():
+    print("Testing CL-IL Phase 2 Codegen & RegAlloc...")
+    test_regalloc_linear_scan()
+    test_dce_preserves_phase2_side_effects()
+    test_phase2_exec_emission()
+    test_simd_vector_fallback()
+    print("✓ All Phase 2 Codegen tests passed!")

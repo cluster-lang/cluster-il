@@ -1,0 +1,76 @@
+// CL-IL: Phase 4 Self-Contained Native Linker Tests (ET_DYN --shared, --embed, SONAME, .o/.a link, Strip)
+// Contributor: Mohammad Zaid <zkalamgir@proton.me>
+// CCFL v2.0 Terms with copyright stewardship managed by Mohammad Zaid/cluster
+
+import "../src/ir/types.zk"
+import "../src/ir/instructions.zk"
+import "../src/ir/builder.zk"
+import "../src/parser/parser.zk"
+import "../src/target/binary/elf64.zk"
+import "../src/target/binary/elf_link.zk"
+import "../src/target/binary/x86_64_exec.zk"
+
+fn test_soname_resolution():
+    dirs: vector[string] := []
+    sn := el_resolve_soname("-lX11", dirs)
+    assert sn == "libX11.so.6" or sn == "libX11.so", "X11 SONAME resolved"
+    sm := el_resolve_soname("-lm", dirs)
+    assert sm == "libm.so.6", "libm SONAME resolved"
+    print("test_soname_resolution passed (X11=" + sn + ", m=" + sm + ")")
+
+fn test_embed_and_strip():
+    payload := "CLM_TEST_PAYLOAD_1234567890"
+    file_write("/tmp/p4_embed.bin", payload)
+    src := "@_clm_embedded_data = external global [1 x i8]\n@_clm_embedded_size = external global i64\ndefine i64 @main() {\nentry:\n  %sz = load i64, ptr @_clm_embedded_size, align 8\n  ret i64 %sz\n}\n"
+    m := parse_module(src)
+    el: vector[string] := []
+    ed: vector[string] := []
+    lo: vector[string] := []
+    opts := XExecOptions("/tmp/p4_embed.bin", el, ed, lo, false)
+    rc := elf_write_exec_x86_64_ex(m, "/tmp/p4_embed_exe", "", 3, opts)
+    assert rc == 0, "embed exec must build with rc 0"
+    rs := elf_strip_file("/tmp/p4_embed_exe", "/tmp/p4_embed_stripped")
+    assert rs == 0, "built-in elf_strip_file must succeed"
+    print("test_embed_and_strip passed")
+
+fn test_shared_et_dyn():
+    src := "define i64 @shared_mul3(i64 %x) {\nentry:\n  %r = mul i64 %x, 3\n  ret i64 %r\n}\n"
+    m := parse_module(src)
+    el: vector[string] := []
+    ed: vector[string] := []
+    lo: vector[string] := []
+    opts := XExecOptions("", el, ed, lo, true)
+    rc := elf_write_exec_x86_64_ex(m, "/tmp/p4_libtest.so", "", 3, opts)
+    assert rc == 0, "shared library ET_DYN must build cleanly"
+    raw := file_read("/tmp/p4_libtest.so")
+    assert len(raw) > 128 and byte_at(raw, 16) == 3, "e_type must be ET_DYN (3)"
+    print("test_shared_et_dyn passed")
+
+fn test_static_o_linking():
+    // Build a standalone relocatable .o using elf_emit_module, then link it into an executable calling its function
+    m_obj := module_new("obj_part.ll")
+    f_add := func_new("obj_add_five", TYPE_I64)
+    bb := bb_new("entry")
+    bb_add_inst(bb, Instruction(OP_RET, "", TYPE_I64, val_const_int(TYPE_I64, 55), val_const_int(TYPE_I64, 55), "", ""))
+    func_add_block(f_add, bb)
+    module_add_func(m_obj, f_add)
+    bw := elf_emit_module(m_obj, "/tmp/p4_part.o")
+    assert bw > 64, "relocatable object emitted"
+
+    src_main := "declare i64 @obj_add_five()\ndefine i64 @main() {\nentry:\n  %v = call i64 @obj_add_five()\n  ret i64 %v\n}\n"
+    m_main := parse_module(src_main)
+    el: vector[string] := []
+    ed: vector[string] := []
+    objs: vector[string] := ["/tmp/p4_part.o"]
+    opts := XExecOptions("", el, ed, objs, false)
+    rc := elf_write_exec_x86_64_ex(m_main, "/tmp/p4_linked_exe", "", 3, opts)
+    assert rc == 0, "static .o linking must succeed cleanly"
+    print("test_static_o_linking passed")
+
+fn main():
+    print("Testing CL-IL Phase 4 Self-Contained Native Linker...")
+    test_soname_resolution()
+    test_embed_and_strip()
+    test_shared_et_dyn()
+    test_static_o_linking()
+    print("✓ All Phase 4 Native Linker tests passed!")
